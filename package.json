@@ -1,0 +1,27 @@
+{
+  "name": "node-imagify",
+  "version": "0.0.1",
+  "description": "Imagify API client library for node.js",
+  "main": "imagify/imagify.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wp-media/node-imagify.git"
+  },
+  "keywords": [
+    "imagify",
+    "api",
+    "client",
+    "library",
+    "optimize",
+    "image"
+  ],
+  "author": "WP MEDIA",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wp-media/node-imagify/issues"
+  },
+  "homepage": "https://github.com/wp-media/node-imagify#readme"
+}
