@@ -6,13 +6,7 @@
 ## Installation
 
 ```bash
-$ npm install -g node-imagify
-```
-
-## Usage
-
-```bash
-$ imagify image.jpg
+$ npm install node-imagify
 ```
 
 ## Copyright and license
