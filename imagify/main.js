@@ -1,80 +1,117 @@
-'use strict'
-
-
 const
-	API_ENDPOINT = 'https://app.imagify.io/api'
-	, request    = require('request')
-	, fs         = require('fs')
-	, extend     = require('extend')
-	, mime       = require('mime')
+    API_ENDPOINT         = 'https://app.imagify.io/api'
+    , ALLOWED_EXTENSIONS = ['.jpg','.jpeg','.png','.gif']
+    , fs                 = require('fs')
+    , path               = require('path')
+    , request            = require('request')
+    , EventEmitter       = require('events')
 
 
-class Imagify {
+class Imagify extends EventEmitter {
 
-	/**
-	 * Constructor
-	 * @param  {string} api_key Your API key (visit https://app.imagify.io/#/api)
-	 */
-	constructor (api_key) {
-		if ( !api_key || 'string' !== typeof(api_key) ) throw new Error('API key is invalid or not set!')
+    constructor (api_key = '') {
+        super()
+        if (!api_key.length) throw new Error('API_KEY is required')
+        this.api_key = api_key
+        this.images_list = []
+    }
 
-		this.api_key = api_key
-	}
+    getImageStats (image_path) {
+        image_path = path.resolve(image_path)
 
-	/**
-	 * Optimize
-	 * @param  {string} source  Image or folder path
-	 * @param  {object} options Optimization options (visit https://imagify.io/docs/api/?python#upload-and-optimize-an-image)
-	 */
-	optimize (input, options) {
+        return new Promise( (resolve, reject) => {
+            fs.stat( image_path, (err, stats) => {
+                if (err) {
+                    reject(err.message)
+                    return
+                }
 
-		fs.accessSync(path[, mode])
-		
-		let
-			file_stats        = null
-			, default_options = {
-				level: 'aggressive',
-				resize: {
-					width: false,
-					height: false,
-					percentage: false
-				},
-				keep_exif: false
-			}
+                if ( !stats.isFile() ) {
+                    reject(`${image_path} is not a file`)
+                    return
+                }
 
-		options = extend( default_options, options || {} )
+                let file_extension = path.extname(image_path)
 
-		console.log( mime.lookup(input) )
-		
-		/*try {
-			file_stats = fs.statSync( input )
-		} catch (e) {
-			throw new Error('Image not found!')
-		}
+                if ( ALLOWED_EXTENSIONS.indexOf(file_extension) < 0 ) {
+                    reject(`${image_path} is not a valid image`)
+                    return
+                }
 
-		let form_data = {
-			image: fs.createReadStream( input )
-		}*/
+                resolve({
+                    name: path.basename(image_path),
+                    path: image_path,
+                    size: stats.size,
+                })
+            })
+        })
+    }
 
-		return new Promise( (resolve, reject) => {
-			resolve()	
-		})
+    addImages (images_path) {
+        return new Promise( (resolve, reject) => {
+            this.images_list = []
 
-		request.post({
-			url: API_ENDPOINT + '/upload',
-			formData: form_data
-		}, (err, httpResponse, body) => {
-			if (err) {
-				reject(err)
-			} else {
-				resolve(body)
-			}
-		})
-	}
+            if (!images_path) {
+                reject('No valid image')
+                return
+            }
 
-	isValidFile (file) {
-		
-	}
+            images_path.forEach( image_path => {
+                
+                this.getImageStats(image_path)
+                    .then( stats => {
+                        this.images_list.push(stats)
+                        
+                        if ( this.images_list.length == images_path.length ) {
+                            resolve(this.images_list)
+                        }
+                    })
+                    .catch( err => reject(err) )
+                
+            })
+        })
+    }
+
+    upload (data) {
+        let form_data = {
+            image: fs.createReadStream(data.path)
+        }
+
+        request.post({
+            url: API_ENDPOINT + '/upload/',
+            headers: {
+                'Authorization': 'token ' + this.api_key
+            },
+            formData: form_data
+        }, (err, httpResponse, body) => {
+            if (err) {
+                this.emit('optimizationError', err)
+            } else {
+                this.emit('optimizationSuccess', JSON.parse(body))
+            }
+        })
+    }
+
+    process (data) {
+        data.forEach(this.upload.bind(this))
+    }
+
+    optimize (...images_path) {
+        const flatten = arr => Array.isArray(arr) ? [].concat( ...arr.map(flatten) ) : arr
+
+        images_path = flatten(images_path)
+
+        this
+            .addImages(images_path)
+            .then( data => {
+                this.emit('beforeUploads', data)
+                this.process(data)
+            })
+            .catch( err => {
+                this.emit('imagesError', err)
+            })
+    }
+
 }
 
 

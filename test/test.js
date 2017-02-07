@@ -1,21 +1,24 @@
-'use strict'
-
-
 const
-	Imagify   = require('../imagify/main.js')
-	, imagify = new Imagify('123456')
+    Imagify   = require('../index')
+    , imagify = new Imagify(process.env.api_key)
 
-
-let options = {
-	level: 'ultra',
-	keep_exif: true
-}
+let images = [
+    '/Users/sebastien/www/node-imagify/test/sample_1.jpg',
+    '/Users/sebastien/www/node-imagify/test/sample_2.jpg',
+]
 
 imagify
-	.optimize( 'sample.jpg', options )
-	.then( response => {
-		//console.log(response)
-	})
-	.catch( error => {
-		//console.error(error)
-	})
+    .on('beforeUploads', data => {
+        console.log('beforeUploads', data)
+    })
+    .on('imagesError', err => {
+        console.log('imagesError', err)
+    })
+    .on('optimizationError', err => {
+        console.log('uploadError', err)
+    })
+    .on('optimizationSuccess', msg => {
+        console.log('uploadSuccess', msg)
+    })
+
+imagify.optimize(images)
